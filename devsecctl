@@ -1,9 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# ===============================
+# Resolve real path (symlink-safe)
+# ===============================
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+
+ROOT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 MODULES_DIR="$ROOT_DIR/modules"
 
+# ===============================
+# Load utils
+# ===============================
 # shellcheck source=modules/utils.sh
 source "$MODULES_DIR/utils.sh"
 
@@ -12,7 +25,7 @@ APP_VERSION="0.1.0"
 
 usage() {
   cat <<'USAGE'
-devsecctl - macOS Dev + Security Control Center
+devsecctl - macOS & Linux Dev + Security Control Center
 
 Usage:
   devsecctl help
@@ -22,14 +35,14 @@ Usage:
 
   devsecctl ports <list|who|kill> [port]
   devsecctl docker <status|ps|up|down|clean>
-  devsecctl snapshot [full|min|latest|open]
+  devsecctl snapshot [min|full|latest|open]
   devsecctl redact <latest|path>
 
 Examples:
   devsecctl doctor
   devsecctl ports who 3000
   devsecctl docker status
-  devsecctl snapshot
+  devsecctl snapshot min
   devsecctl snapshot open
   devsecctl redact latest
 USAGE
@@ -40,18 +53,43 @@ main() {
   shift || true
 
   case "$cmd" in
-    help|-h|--help) usage ;;
-    --version|-v) echo "$APP_NAME $APP_VERSION" ;;
-    doctor)  source "$MODULES_DIR/doctor.sh"; doctor_main "$@" ;;
-    install) source "$MODULES_DIR/install.sh"; install_main "$@" ;;
-
-    ports)    source "$MODULES_DIR/ports.sh"; ports_main "$@" ;;
-    docker)   source "$MODULES_DIR/docker.sh"; docker_main "$@" ;;
-    snapshot) source "$MODULES_DIR/snapshot.sh"; snapshot_main "$@" ;;
-    redact)   source "$MODULES_DIR/redact.sh"; redact_main "$@" ;;
-    notes)    source "$MODULES_DIR/notes.sh"; notes_main "$@" ;;
-
-    *) die "Unknown command: $cmd. Run: devsecctl help" ;;
+    help|-h|--help)
+      usage
+      ;;
+    --version|-v)
+      echo "$APP_NAME $APP_VERSION"
+      ;;
+    doctor)
+      source "$MODULES_DIR/doctor.sh"
+      doctor_main "$@"
+      ;;
+    install)
+      source "$MODULES_DIR/install.sh"
+      install_main "$@"
+      ;;
+    ports)
+      source "$MODULES_DIR/ports.sh"
+      ports_main "$@"
+      ;;
+    docker)
+      source "$MODULES_DIR/docker.sh"
+      docker_main "$@"
+      ;;
+    snapshot)
+      source "$MODULES_DIR/snapshot.sh"
+      snapshot_main "$@"
+      ;;
+    redact)
+      source "$MODULES_DIR/redact.sh"
+      redact_main "$@"
+      ;;
+    notes)
+      source "$MODULES_DIR/notes.sh"
+      notes_main "$@"
+      ;;
+    *)
+      die "Unknown command: $cmd. Run: devsecctl help"
+      ;;
   esac
 }
 
