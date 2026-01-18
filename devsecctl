@@ -21,7 +21,7 @@ MODULES_DIR="$ROOT_DIR/modules"
 source "$MODULES_DIR/utils.sh"
 
 APP_NAME="devsecctl"
-APP_VERSION="0.1.1"
+APP_VERSION="0.1.2"
 
 usage() {
   cat <<'USAGE'
