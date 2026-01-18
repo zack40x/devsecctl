@@ -33,7 +33,7 @@ Creates a sanitized copy under `output/redacted/<timestamp>/`:
 
 ## Install
 
-### Option A: Clone + run locally
+### Clone + run locally
 ```bash
 git clone https://github.com/<you>/devsecctl.git
 cd devsecctl
