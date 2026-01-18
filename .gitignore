@@ -1,0 +1,10 @@
+# Generated output
+output/
+data/
+
+# macOS junk
+.DS_Store
+
+# Logs/temp
+*.log
+*.tmp

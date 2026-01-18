@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MODULES_DIR="$ROOT_DIR/modules"
+
+# shellcheck source=modules/utils.sh
+source "$MODULES_DIR/utils.sh"
+
+APP_NAME="devsecctl"
+APP_VERSION="0.1.0"
+
+usage() {
+  cat <<'USAGE'
+devsecctl - macOS Dev + Security Control Center
+
+Usage:
+  devsecctl help
+  devsecctl --version
+  devsecctl doctor
+  devsecctl install
+
+  devsecctl ports <list|who|kill> [port]
+  devsecctl docker <status|ps|up|down|clean>
+  devsecctl snapshot [full|min|latest|open]
+  devsecctl redact <latest|path>
+
+Examples:
+  devsecctl doctor
+  devsecctl ports who 3000
+  devsecctl docker status
+  devsecctl snapshot
+  devsecctl snapshot open
+  devsecctl redact latest
+USAGE
+}
+
+main() {
+  local cmd="${1:-help}"
+  shift || true
+
+  case "$cmd" in
+    help|-h|--help) usage ;;
+    --version|-v) echo "$APP_NAME $APP_VERSION" ;;
+    doctor)  source "$MODULES_DIR/doctor.sh"; doctor_main "$@" ;;
+    install) source "$MODULES_DIR/install.sh"; install_main "$@" ;;
+
+    ports)    source "$MODULES_DIR/ports.sh"; ports_main "$@" ;;
+    docker)   source "$MODULES_DIR/docker.sh"; docker_main "$@" ;;
+    snapshot) source "$MODULES_DIR/snapshot.sh"; snapshot_main "$@" ;;
+    redact)   source "$MODULES_DIR/redact.sh"; redact_main "$@" ;;
+    notes)    source "$MODULES_DIR/notes.sh"; notes_main "$@" ;;
+
+    *) die "Unknown command: $cmd. Run: devsecctl help" ;;
+  esac
+}
+
+main "$@"
