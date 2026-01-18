@@ -35,7 +35,7 @@ Creates a sanitized copy under `output/redacted/<timestamp>/`:
 
 ### Clone + run locally
 ```bash
-git clone https://github.com/<you>/devsecctl.git
+git clone https://github.com/zack40x/devsecctl.git
 cd devsecctl
 chmod +x devsecctl
 ./devsecctl help
