@@ -1,0 +1,51 @@
+#compdef devsecctl
+
+_devsecctl() {
+  local -a commands
+  commands=(
+    "help:Show help"
+    "--version:Show version"
+    "doctor:Run environment checks"
+    "install:Install devsecctl system-wide"
+    "ports:Port management"
+    "docker:Docker helpers"
+    "snapshot:System snapshot"
+    "redact:Redact sensitive data"
+  )
+
+  if (( CURRENT == 2 )); then
+    _describe 'command' commands
+    return
+  fi
+
+  case "$words[2]" in
+    ports)
+      _values "ports subcommand" \
+        "list[List listening ports]" \
+        "who[Find process using a port]" \
+        "kill[Kill process using a port]"
+      ;;
+    docker)
+      _values "docker subcommand" \
+        "status[Docker status]" \
+        "ps[List containers]" \
+        "up[Start compose stack]" \
+        "down[Stop compose stack]" \
+        "clean[Cleanup docker]"
+      ;;
+    snapshot)
+      _values "snapshot mode" \
+        "min[Minimal snapshot]" \
+        "full[Full snapshot]" \
+        "latest[Latest snapshot path]" \
+        "open[Open snapshot report]"
+      ;;
+    redact)
+      _values "redact target" \
+        "latest[Redact latest snapshot]" \
+        "path[Redact specific path]"
+      ;;
+  esac
+}
+
+_devsecctl

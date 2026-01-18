@@ -1,68 +1,102 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# shellcheck source=modules/utils.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/utils.sh"
-
-install_usage() {
-  cat <<'USAGE'
-Usage:
-  devsecctl install
-
-Creates a symlink so you can run:
-  devsecctl ...
-
-Targets (in order):
-  /usr/local/bin
-  /opt/homebrew/bin
-  ~/.linuxbrew/bin
-  /home/linuxbrew/.linuxbrew/bin
-USAGE
-}
-
 install_main() {
-  local sub="${1:-run}"
-  case "$sub" in
-    help|-h|--help) install_usage; return 0 ;;
-    run|"") ;;
-    *) die "Unknown install subcommand: $sub" ;;
-  esac
+  # Resolve repo root even if called via symlink
+  local SOURCE="${BASH_SOURCE[0]}"
+  while [ -h "$SOURCE" ]; do
+    local DIR
+    DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+  done
+  local MODULES_DIR
+  MODULES_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  local ROOT_DIR
+  ROOT_DIR="$(cd -P "$MODULES_DIR/.." && pwd)"
 
-  local root target link
-  root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-  target=""
-
-  if [[ -d "/usr/local/bin" ]]; then
-    target="/usr/local/bin"
-  elif [[ -d "/opt/homebrew/bin" ]]; then
-    target="/opt/homebrew/bin"
-  elif [[ -d "$HOME/.linuxbrew/bin" ]]; then
-    target="$HOME/.linuxbrew/bin"
-  elif [[ -d "/home/linuxbrew/.linuxbrew/bin" ]]; then
-    target="/home/linuxbrew/.linuxbrew/bin"
+  local target=""
+  # Prefer Homebrew prefix on Apple Silicon if it exists
+  if [[ -d "/opt/homebrew/bin" ]]; then
+    target="/opt/homebrew/bin/devsecctl"
   else
-    die "No standard bin directory found. Add this repo to PATH manually."
+    target="/usr/local/bin/devsecctl"
   fi
 
-  link="$target/devsecctl"
-
-  info "Installing symlink:"
-  info "  $link -> $root/devsecctl"
+  echo "[*] Installing symlink:"
+  echo "[*]   $target -> $ROOT_DIR/devsecctl"
   echo
   read -r -p "Proceed? [y/N] " ans
-  case "${ans:-N}" in
-    y|Y)
-      # If installing into a system dir, use sudo. For user-owned dirs, no sudo needed.
-      if [[ "$target" == "$HOME/.linuxbrew/bin" ]]; then
-        ln -sf "$root/devsecctl" "$link"
-      else
-        sudo ln -sf "$root/devsecctl" "$link"
-      fi
+  if [[ "${ans:-N}" != "y" && "${ans:-N}" != "Y" ]]; then
+    echo "[!] Cancelled."
+    return 1
+  fi
 
-      info "Installed ✅"
-      info "Test:"
-      info "  devsecctl --version"
-      ;;
-    *) info "Cancelled." ;;
-  esac
+  # Ensure target dir exists
+  local target_dir
+  target_dir="$(dirname "$target")"
+  if [[ ! -d "$target_dir" ]]; then
+    echo "[*] Creating: $target_dir"
+    sudo mkdir -p "$target_dir"
+  fi
+
+  # Create/update symlink
+  sudo ln -sf "$ROOT_DIR/devsecctl" "$target"
+
+  echo "[*] Installed ✅"
+  echo "[*] Test:"
+  echo "[*]   devsecctl --version"
+  echo
+
+  # ------------------------------
+  # Install zsh completion (best-effort)
+  # ------------------------------
+  local completion_src="$ROOT_DIR/completions/_devsecctl"
+  if [[ -f "$completion_src" ]]; then
+    local zsh_comp_dir="$HOME/.zsh/completions"
+    mkdir -p "$zsh_comp_dir"
+    cp -f "$completion_src" "$zsh_comp_dir/_devsecctl"
+
+    echo "[*] Installed zsh completion ✅"
+    echo "[*]   $zsh_comp_dir/_devsecctl"
+
+    # Offer to enable compinit automatically (optional)
+    local zshrc="$HOME/.zshrc"
+    local need_block="yes"
+    if [[ -f "$zshrc" ]]; then
+      if grep -q 'fpath=(~/.zsh/completions' "$zshrc" && grep -q 'compinit' "$zshrc"; then
+        need_block="no"
+      fi
+    fi
+
+    if [[ "$need_block" == "yes" ]]; then
+      echo
+      echo "[*] Zsh needs a one-time setup to enable tab completion."
+      echo "[*] Add these lines to ~/.zshrc (recommended):"
+      echo "    fpath=(~/.zsh/completions \$fpath)"
+      echo "    autoload -Uz compinit"
+      echo "    compinit"
+      echo
+      read -r -p "Add this block to ~/.zshrc now? [y/N] " addz
+      if [[ "${addz:-N}" == "y" || "${addz:-N}" == "Y" ]]; then
+        {
+          echo ""
+          echo "# devsecctl completions"
+          echo "fpath=(~/.zsh/completions \$fpath)"
+          echo "autoload -Uz compinit"
+          echo "compinit"
+        } >> "$zshrc"
+        echo "[*] Updated ~/.zshrc ✅"
+        echo "[*] Restart your terminal or run: exec zsh"
+      else
+        echo "[!] Skipped ~/.zshrc update."
+        echo "[*] You can enable later by adding the 3 lines shown above."
+      fi
+    else
+      echo "[*] ~/.zshrc already has completion enabled ✅"
+    fi
+  else
+    echo "[!] No completion file found at: $completion_src"
+    echo "[!] Skipping zsh completion install."
+  fi
 }

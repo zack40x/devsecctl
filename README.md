@@ -39,3 +39,16 @@ git clone https://github.com/zack40x/devsecctl.git
 cd devsecctl
 chmod +x devsecctl
 ./devsecctl help
+
+## Zsh tab completion (macOS/Linux)
+
+devsecctl ships a zsh completion script. During install, it is copied to:
+
+- `~/.zsh/completions/_devsecctl`
+
+If your shell does not already have completions enabled, add this to `~/.zshrc`:
+
+```zsh
+fpath=(~/.zsh/completions $fpath)
+autoload -Uz compinit
+compinit
